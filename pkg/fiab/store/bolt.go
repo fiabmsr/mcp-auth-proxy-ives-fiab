@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	bucketUsers = []byte("users")
-	bucketSlugs = []byte("slugs")
-	bucketAudit = []byte("audit")
+	bucketUsers   = []byte("users")
+	bucketSlugs   = []byte("slugs")
+	bucketAudit   = []byte("audit")
+	bucketClients = []byte("clients")
 )
 
 // !fiab: stockage local dans un fichier bbolt distinct de celui d'origine (bbolt verrouille son fichier)
@@ -28,7 +29,7 @@ func openBolt(file string) (*boltStore, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 	err = db.Update(func(tx *bbolt.Tx) error {
-		for _, name := range [][]byte{bucketUsers, bucketSlugs, bucketAudit} {
+		for _, name := range [][]byte{bucketUsers, bucketSlugs, bucketAudit, bucketClients} {
 			if _, err := tx.CreateBucketIfNotExists(name); err != nil {
 				return err
 			}
@@ -172,6 +173,25 @@ func (s *boltStore) ListAudit(_ context.Context, limit int) ([]AuditEntry, error
 		return nil
 	})
 	return entries, err
+}
+
+func (s *boltStore) SetClientName(_ context.Context, clientID, name string) error {
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		return tx.Bucket(bucketClients).Put([]byte(clientID), []byte(name))
+	})
+}
+
+func (s *boltStore) ClientName(_ context.Context, clientID string) (string, error) {
+	var name string
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		data := tx.Bucket(bucketClients).Get([]byte(clientID))
+		if data == nil {
+			return ErrNotFound
+		}
+		name = string(data)
+		return nil
+	})
+	return name, err
 }
 
 func (s *boltStore) Close() error {

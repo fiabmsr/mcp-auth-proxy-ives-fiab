@@ -194,7 +194,29 @@ func (a *App) renderConsent(c *gin.Context, ar fosite.AuthorizeRequester) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	a.render(c, http.StatusOK, "consent.html", gin.H{"CSRF": token, "User": user, "Next": c.Request.URL.Path})
+	// !fiab: nom déclaré à l'enregistrement (vide si inconnu) et domaine qui recevra l'autorisation
+	client, _ := a.store.ClientName(c.Request.Context(), ar.GetClient().GetID())
+	returnTo := ar.GetRedirectURI().Host
+	if returnTo == "" {
+		returnTo = ar.GetRedirectURI().Scheme
+	}
+	a.render(c, http.StatusOK, "consent.html", gin.H{
+		"CSRF": token, "User": user, "Next": c.Request.URL.Path, "Client": client, "ReturnTo": returnTo,
+	})
+}
+
+// !fiab: mémorise le nom que l'application déclare (Claude, Cursor…), raccourci à 60 caractères
+func (a *App) rememberClient(ctx context.Context, clientID, name string) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return
+	}
+	if runes := []rune(name); len(runes) > 60 {
+		name = string(runes[:60])
+	}
+	if err := a.store.SetClientName(ctx, clientID, name); err != nil {
+		a.logger.Warn("fiab: nom d'application non enregistré", zap.Error(err))
+	}
 }
 
 func (a *App) activeUser(ctx context.Context, id string) (*store.User, error) {

@@ -45,6 +45,9 @@ type Hooks struct {
 
 	// !fiab: affichage de la page de validation
 	RenderConsent func(c *gin.Context, ar fosite.AuthorizeRequester)
+
+	// !fiab: nom déclaré par l'application lors de son enregistrement automatique (DCR)
+	ClientRegistered func(ctx context.Context, clientID, clientName string)
 }
 
 func (a *IDPRouter) SetHooks(hooks Hooks) {
@@ -449,6 +452,9 @@ func (a *IDPRouter) handleRegister(c *gin.Context) {
 		a.logger.Error("Failed to register client", zap.String("client_id", clientID), zap.Error(err))
 		c.JSON(500, gin.H{"error": "server_error", "error_description": err.Error()})
 		return
+	}
+	if a.hooks.ClientRegistered != nil {
+		a.hooks.ClientRegistered(ctx, clientID, req.ClientName)
 	}
 
 	registrationClientURI, err := url.JoinPath(RegistrationEndpoint, clientID)

@@ -162,6 +162,7 @@ func (a *App) IDPHooks() idp.Hooks {
 		ExtraClaims:           a.tokenClaims,
 		ValidateAccessRequest: a.validateGrant,
 		RenderConsent:         a.renderConsent,
+		ClientRegistered:      a.rememberClient,
 	}
 }
 

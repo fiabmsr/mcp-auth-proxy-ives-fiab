@@ -3,9 +3,13 @@
 <div class="screen">
   <main class="card">
     <p class="eyebrow">FIAB Web Identity</p>
-    <h1>Autoriser <span>Claude</span> à accéder à votre espace ?</h1>
-    <p class="info">Connecté en tant que {{.User.DisplayName}} ({{.User.Slug}})</p>
-    <p class="notice"><strong>Claude pourra utiliser les outils de votre espace en votre nom.</strong> Vous pourrez retirer cet accès à tout moment depuis les paramètres de Claude.</p>
+    {{if .Client}}
+    <h1>Autoriser <span>{{.Client}}</span> à accéder à votre espace ?</h1>
+    {{else}}
+    <h1>Autoriser l'accès à votre <span>espace</span> ?</h1>
+    {{end}}
+    <p class="info">Connecté en tant que {{.User.DisplayName}} ({{.User.Slug}}){{with .ReturnTo}} · retour vers {{.}}{{end}}</p>
+    <p class="notice"><strong>{{if .Client}}{{.Client}}{{else}}Cette application{{end}} pourra utiliser les outils de votre espace en votre nom.</strong> N'autorisez que les applications que vous avez vous-même connectées.</p>
     <form method="post" class="actions">
       {{template "csrf" .}}
       <button type="submit" name="action" value="deny" class="btn btn-ghost">Refuser</button>

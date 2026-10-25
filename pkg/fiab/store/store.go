@@ -82,6 +82,9 @@ type Store interface {
 	DeleteUser(ctx context.Context, id string) error
 	AddAudit(ctx context.Context, e AuditEntry) error
 	ListAudit(ctx context.Context, limit int) ([]AuditEntry, error)
+	// !fiab: nom affiché des applications OAuth enregistrées (Claude, Cursor…)
+	SetClientName(ctx context.Context, clientID, name string) error
+	ClientName(ctx context.Context, clientID string) (string, error)
 	Close() error
 }
 

@@ -25,6 +25,13 @@ type auditRow struct {
 
 func (auditRow) TableName() string { return "fiab_audit" }
 
+type clientRow struct {
+	ID   string `gorm:"primaryKey;size:512"`
+	Name string `gorm:"size:200"`
+}
+
+func (clientRow) TableName() string { return "fiab_clients" }
+
 type sqlStore struct {
 	db *gorm.DB
 }
@@ -34,7 +41,7 @@ func openSQL(dialector gorm.Dialector) (*sqlStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect database: %w", err)
 	}
-	if err := db.AutoMigrate(&userRow{}, &auditRow{}); err != nil {
+	if err := db.AutoMigrate(&userRow{}, &auditRow{}, &clientRow{}); err != nil {
 		return nil, fmt.Errorf("failed to migrate schema: %w", err)
 	}
 	return &sqlStore{db: db}, nil
@@ -141,6 +148,19 @@ func (s *sqlStore) ListAudit(ctx context.Context, limit int) ([]AuditEntry, erro
 		entries = append(entries, e)
 	}
 	return entries, nil
+}
+
+func (s *sqlStore) SetClientName(ctx context.Context, clientID, name string) error {
+	return s.db.WithContext(ctx).Save(&clientRow{ID: clientID, Name: name}).Error
+}
+
+func (s *sqlStore) ClientName(ctx context.Context, clientID string) (string, error) {
+	var row clientRow
+	err := s.db.WithContext(ctx).Where("id = ?", clientID).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", ErrNotFound
+	}
+	return row.Name, err
 }
 
 func (s *sqlStore) Close() error {

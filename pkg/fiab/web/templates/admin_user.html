@@ -1,0 +1,94 @@
+{{define "title"}}{{.User.DisplayName}}{{end}}
+{{define "content"}}
+{{template "adminheader" .}}
+{{$action := printf "%s/users/%s" .AdminPath .User.ID}}
+<main class="page narrow">
+  <p class="eyebrow"><a href="{{.AdminPath}}/">Utilisateurs</a></p>
+  <h1>{{.User.DisplayName}} {{if .User.Active}}<span class="badge badge-ok">Actif</span>{{else}}<span class="badge">Désactivé</span>{{end}}</h1>
+  <p class="muted">Identifiant <code>{{.User.Slug}}</code> · créé le {{date .User.CreatedAt}} · dernière connexion : {{date .User.LastLoginAt}}</p>
+
+  <section class="panel">
+    <h2>URL publique</h2>
+    <div class="copy">
+      <input id="public-url" value="{{.PublicURL}}" readonly>
+      <button type="button" class="btn btn-ghost" data-copy="#public-url">Copier</button>
+    </div>
+    <p class="hint">À coller dans Claude : Paramètres › Connecteurs › Ajouter un connecteur personnalisé.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Informations</h2>
+    <form method="post" action="{{$action}}/update" class="form">
+      {{template "csrf" .}}
+      <label for="name">Nom affiché</label>
+      <input id="name" name="name" value="{{.User.DisplayName}}" maxlength="100" required>
+      <label for="target">URL MCP de destination</label>
+      <input id="target" name="target" type="url" value="{{.User.TargetURL}}" required>
+      <button type="submit" class="btn">Enregistrer</button>
+    </form>
+    <form method="post" action="{{$action}}/test" class="inline">
+      {{template "csrf" .}}
+      <button type="submit" class="btn btn-ghost">Tester la connexion</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>En-têtes injectés</h2>
+    <p class="hint">Valeurs en écriture seule : chiffrées, jamais réaffichées. Enregistrer un nom existant remplace sa valeur.</p>
+    {{if .User.Headers}}
+    <ul class="headers">
+      {{range .User.Headers}}
+      <li>
+        <code>{{.Name}}</code><span class="masked">••••••••</span>
+        <form method="post" action="{{$action}}/header-delete" data-confirm="Supprimer l'en-tête {{.Name}} ?">
+          {{template "csrf" $}}<input type="hidden" name="name" value="{{.Name}}">
+          <button type="submit" class="link danger">Supprimer</button>
+        </form>
+      </li>
+      {{end}}
+    </ul>
+    {{end}}
+    <form method="post" action="{{$action}}/header" class="form grid-2">
+      {{template "csrf" .}}
+      <div>
+        <label for="header-name">Nom</label>
+        <input id="header-name" name="name" placeholder="x-api-key" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <div>
+        <label for="header-value">Valeur</label>
+        <input id="header-value" name="value" type="password" autocomplete="off" required>
+      </div>
+      <button type="submit" class="btn">Enregistrer l'en-tête</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Mot de passe</h2>
+    <form method="post" action="{{$action}}/password" class="form">
+      {{template "csrf" .}}
+      <label for="password">Nouveau mot de passe</label>
+      <input id="password" name="password" type="password" minlength="12" autocomplete="new-password" required>
+      <button type="submit" class="btn">Réinitialiser</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Accès</h2>
+    <div class="actions start">
+      <form method="post" action="{{$action}}/status">
+        {{template "csrf" .}}
+        <button type="submit" class="btn btn-ghost">{{if .User.Active}}Désactiver{{else}}Réactiver{{end}}</button>
+      </form>
+      <form method="post" action="{{$action}}/revoke" data-confirm="Révoquer toutes les sessions et tous les jetons ?">
+        {{template "csrf" .}}
+        <button type="submit" class="btn btn-ghost">Révoquer sessions et jetons</button>
+      </form>
+      <form method="post" action="{{$action}}/delete" data-confirm="Supprimer définitivement {{.User.Slug}} ?">
+        {{template "csrf" .}}
+        <button type="submit" class="btn btn-danger">Supprimer</button>
+      </form>
+    </div>
+  </section>
+</main>
+{{end}}
+{{define "scripts"}}<script src="/.fiab/static/admin.js"></script>{{end}}

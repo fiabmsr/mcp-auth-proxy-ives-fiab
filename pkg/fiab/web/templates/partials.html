@@ -1,0 +1,17 @@
+{{/* !fiab: éléments partagés du tableau de bord */}}
+{{define "csrf"}}<input type="hidden" name="csrf_token" value="{{.CSRF}}">{{end}}
+
+{{/* !fiab: signature des pages client */}}
+{{define "footer"}}<footer class="footer"><a href="https://fiab.website" target="_blank" rel="noopener noreferrer">Ives FASSINOU</a></footer>{{end}}
+
+{{define "adminheader"}}
+<header class="topbar">
+  <a class="brand" href="{{.AdminPath}}/">MCP Proxy <span>Admin</span></a>
+  <nav class="topnav">
+    <a href="{{.AdminPath}}/">Utilisateurs</a>
+    <a href="{{.AdminPath}}/audit">Journal</a>
+    <form method="post" action="{{.AdminPath}}/logout">{{template "csrf" .}}<button type="submit" class="link">Déconnexion</button></form>
+  </nav>
+</header>
+{{if .Flash}}<p class="alert {{if .FlashFail}}alert-error{{else}}alert-ok{{end}}" role="status">{{.Flash}}</p>{{end}}
+{{end}}

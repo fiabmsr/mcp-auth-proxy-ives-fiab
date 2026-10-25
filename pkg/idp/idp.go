@@ -32,6 +32,23 @@ type IDPRouter struct {
 	provider    fosite.OAuth2Provider
 	signer      *jwt.DefaultSigner
 	authRouter  *auth.AuthRouter
+	hooks       Hooks
+}
+
+// !fiab: points d'accroche optionnels du mode multi-utilisateurs (vides = comportement d'origine)
+type Hooks struct {
+	// !fiab: claims ajoutés au jeton de l'utilisateur connecté ; une erreur refuse l'autorisation
+	ExtraClaims func(ctx context.Context, subject string) (map[string]any, error)
+
+	// !fiab: contrôle d'une demande de jeton (code ou refresh) avant émission
+	ValidateAccessRequest func(ctx context.Context, subject string, extra map[string]any) error
+
+	// !fiab: affichage de la page de validation
+	RenderConsent func(c *gin.Context, ar fosite.AuthorizeRequester)
+}
+
+func (a *IDPRouter) SetHooks(hooks Hooks) {
+	a.hooks = hooks
 }
 
 func NewIDPRouter(
@@ -164,6 +181,17 @@ func (a *IDPRouter) handleAuthorizationReturnForm(c *gin.Context) {
 		return
 	}
 
+	if a.hooks.RenderConsent != nil {
+		ar, err := a.repo.GetAuthorizeRequest(c.Request.Context(), arID)
+		if err != nil {
+			a.logger.Error("Failed to get authorize requester", zap.Error(err))
+			c.AbortWithStatusJSON(500, gin.H{"error": "Internal Server Error"})
+			return
+		}
+		a.hooks.RenderConsent(c, ar)
+		return
+	}
+
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(`<!doctype html><html><body><form method="post"><button type="submit">Authorize</button></form></body></html>`))
 }
 
@@ -188,6 +216,14 @@ func (a *IDPRouter) handleAuthorizationReturn(c *gin.Context) {
 		}
 	}()
 
+	// !fiab: refus explicite depuis la page de validation
+	if c.PostForm("action") == "deny" {
+		removeAuthorizeRequestID(session, arID)
+		_ = session.Save()
+		a.provider.WriteAuthorizeError(ctx, c.Writer, ar, fosite.ErrAccessDenied)
+		return
+	}
+
 	for _, scope := range ar.GetRequestedScopes() {
 		ar.GrantScope(scope)
 	}
@@ -207,6 +243,19 @@ func (a *IDPRouter) handleAuthorizationReturn(c *gin.Context) {
 		a.logger.With(utils.Err(err)...).Error("Failed to create JWT session", zap.Error(err))
 		a.provider.WriteAuthorizeError(ctx, c.Writer, ar, err)
 		return
+	}
+	if a.hooks.ExtraClaims != nil {
+		extra, err := a.hooks.ExtraClaims(ctx, subject)
+		if err != nil {
+			a.provider.WriteAuthorizeError(ctx, c.Writer, ar, fosite.ErrAccessDenied.WithWrap(err))
+			return
+		}
+		if jwtSession.JWTClaims.Extra == nil {
+			jwtSession.JWTClaims.Extra = map[string]any{}
+		}
+		for k, v := range extra {
+			jwtSession.JWTClaims.Extra[k] = v
+		}
 	}
 
 	response, err := a.provider.NewAuthorizeResponse(ctx, ar, jwtSession)
@@ -288,6 +337,17 @@ func (a *IDPRouter) handleToken(c *gin.Context) {
 		a.logger.With(utils.Err(err)...).Error("Failed to create access request", zap.String("grant_type", c.PostForm("grant_type")))
 		a.provider.WriteAccessError(ctx, c.Writer, accessRequest, err)
 		return
+	}
+	if a.hooks.ValidateAccessRequest != nil {
+		sess, ok := accessRequest.GetSession().(*Session)
+		if !ok || sess.JWTClaims == nil {
+			a.provider.WriteAccessError(ctx, c.Writer, accessRequest, fosite.ErrInvalidGrant)
+			return
+		}
+		if err := a.hooks.ValidateAccessRequest(ctx, sess.JWTClaims.Subject, sess.JWTClaims.Extra); err != nil {
+			a.provider.WriteAccessError(ctx, c.Writer, accessRequest, fosite.ErrInvalidGrant.WithWrap(err))
+			return
+		}
 	}
 
 	response, err := a.provider.NewAccessResponse(ctx, accessRequest)

@@ -1,0 +1,17 @@
+{{/* !fiab: gabarit commun à toutes les pages */}}
+{{define "layout"}}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{{template "title" .}} · MCP Proxy</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap">
+  <link rel="stylesheet" href="/.fiab/static/app.css">
+</head>
+<body>
+{{template "content" .}}
+{{block "scripts" .}}{{end}}
+</body>
+</html>
+{{end}}

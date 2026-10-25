@@ -1,0 +1,24 @@
+{{define "title"}}Administration{{end}}
+{{define "content"}}
+<div class="screen">
+  <main class="card">
+    <p class="eyebrow">FIAB Web Identity</p>
+    <h1>Espace <span>admin</span></h1>
+    <p class="info">Gestion des accès MCP</p>
+    {{with .Error}}<p class="alert alert-error" role="alert">{{.}}</p>{{end}}
+    <form method="post" action="{{.AdminPath}}/login" class="form">
+      {{template "csrf" .}}
+      <label for="username">Identifiant</label>
+      <input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+      <label for="password">Mot de passe</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      {{if .TOTP}}
+      <label for="code">Code de vérification</label>
+      <input id="code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+      {{end}}
+      <button type="submit" class="btn btn-block">Se connecter</button>
+    </form>
+  </main>
+  {{template "footer"}}
+</div>
+{{end}}

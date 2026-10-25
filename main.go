@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sigbit/mcp-auth-proxy/v2/pkg/fiab"
 	mcpproxy "github.com/sigbit/mcp-auth-proxy/v2/pkg/mcp-proxy"
 	"github.com/spf13/cobra"
 )
@@ -219,9 +220,14 @@ func newRootCommand(run proxyRunnerFunc) *cobra.Command {
 	var httpStreamingOnly bool
 	var trustedProxies string
 
+	var fiabConfig *fiab.Config
+
 	rootCmd := &cobra.Command{
 		Use: "mcp-warp",
+		// !fiab: obligatoire avec des sous-commandes, sinon cobra refuse l'URL cible en argument
+		Args: cobra.ArbitraryArgs,
 		Run: func(cmd *cobra.Command, args []string) {
+			mcpproxy.Fiab = fiabConfig
 			googleAllowedUsersList := splitCSV(googleAllowedUsers)
 			googleAllowedWorkspacesList := splitCSV(googleAllowedWorkspaces)
 			githubAllowedUsersList := splitCSV(githubAllowedUsers)
@@ -348,6 +354,10 @@ func newRootCommand(run proxyRunnerFunc) *cobra.Command {
 	rootCmd.Flags().BoolVar(&httpStreamingOnly, "http-streaming-only", getEnvBoolWithDefault("HTTP_STREAMING_ONLY", false), "Reject SSE (GET) requests and keep the backend in HTTP streaming-only mode")
 	rootCmd.Flags().StringVar(&headerMapping, "header-mapping", getEnvWithDefault("HEADER_MAPPING", ""), "Comma-separated mapping of JSON pointer paths to header names (e.g., /email:X-Forwarded-Email,/preferred_username:X-Forwarded-User)")
 	rootCmd.Flags().StringVar(&headerMappingBase, "header-mapping-base", getEnvWithDefault("HEADER_MAPPING_BASE", "/userinfo"), "JSON pointer base path for header mapping claims lookup (e.g., /userinfo or /)")
+
+	// !fiab: mode multi-utilisateurs et commandes de génération des secrets
+	fiabConfig = fiab.BindFlags(rootCmd)
+	rootCmd.AddCommand(fiab.Commands()...)
 
 	return rootCmd
 }

@@ -1,0 +1,20 @@
+{{define "title"}}Connexion{{end}}
+{{define "content"}}
+<div class="screen">
+  <main class="card">
+    <p class="eyebrow">FIAB Web Identity</p>
+    <h1>Connexion à votre <span>espace</span></h1>
+    <p class="info">Accès sécurisé à vos outils MCP</p>
+    {{with .Error}}<p class="alert alert-error" role="alert">{{.}}</p>{{end}}
+    <form method="post" action="/.auth/login" class="form">
+      {{template "csrf" .}}
+      <label for="username">Identifiant</label>
+      <input id="username" name="username" value="{{.Slug}}" autocomplete="username" autocapitalize="none" spellcheck="false" required{{if .Locked}} readonly{{else}} autofocus{{end}}>
+      <label for="password">Mot de passe</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required{{if .Locked}} autofocus{{end}}>
+      <button type="submit" class="btn btn-block">Se connecter</button>
+    </form>
+  </main>
+  {{template "footer"}}
+</div>
+{{end}}

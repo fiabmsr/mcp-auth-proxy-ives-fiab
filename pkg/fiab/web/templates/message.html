@@ -1,0 +1,11 @@
+{{define "title"}}{{.Title}}{{end}}
+{{define "content"}}
+<div class="screen">
+  <main class="card">
+    <p class="eyebrow">FIAB Web Identity</p>
+    <h1>{{.Title}}</h1>
+    <p class="info">{{.Text}}</p>
+  </main>
+  {{template "footer"}}
+</div>
+{{end}}

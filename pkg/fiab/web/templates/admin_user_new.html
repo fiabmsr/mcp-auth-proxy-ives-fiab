@@ -1,0 +1,22 @@
+{{define "title"}}Nouvel utilisateur{{end}}
+{{define "content"}}
+{{template "adminheader" .}}
+<main class="page narrow">
+  <p class="eyebrow"><a href="{{.AdminPath}}/">Utilisateurs</a></p>
+  <h1>Nouvel utilisateur</h1>
+  {{with .Error}}<p class="alert alert-error" role="alert">{{.}}</p>{{end}}
+  <form method="post" action="{{.AdminPath}}/users/new" class="form panel">
+    {{template "csrf" .}}
+    <label for="slug">Identifiant</label>
+    <input id="slug" name="slug" value="{{.Form.Slug}}" pattern="[a-z0-9][a-z0-9\-]{1,62}" autocapitalize="none" spellcheck="false" required>
+    <p class="hint">Minuscules, chiffres et tirets. Utilisé dans l'URL publique, non modifiable.</p>
+    <label for="name">Nom affiché</label>
+    <input id="name" name="name" value="{{.Form.Name}}" maxlength="100" required>
+    <label for="password">Mot de passe</label>
+    <input id="password" name="password" type="password" minlength="12" autocomplete="new-password" required>
+    <label for="target">URL MCP de destination</label>
+    <input id="target" name="target" type="url" value="{{.Form.Target}}" placeholder="https://automation.example.com/mcp/..." required>
+    <button type="submit" class="btn">Créer l'utilisateur</button>
+  </form>
+</main>
+{{end}}

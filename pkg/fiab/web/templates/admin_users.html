@@ -1,0 +1,33 @@
+{{define "title"}}Utilisateurs{{end}}
+{{define "content"}}
+{{template "adminheader" .}}
+<main class="page">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Tableau de bord</p>
+      <h1>Utilisateurs</h1>
+    </div>
+    <a class="btn" href="{{.AdminPath}}/users/new">Nouvel utilisateur</a>
+  </div>
+  {{if .Users}}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nom</th><th>Identifiant</th><th>Statut</th><th>Dernière connexion</th><th></th></tr></thead>
+      <tbody>
+      {{range .Users}}
+        <tr>
+          <td>{{.DisplayName}}</td>
+          <td><code>{{.Slug}}</code></td>
+          <td>{{if .Active}}<span class="badge badge-ok">Actif</span>{{else}}<span class="badge">Désactivé</span>{{end}}</td>
+          <td>{{date .LastLoginAt}}</td>
+          <td class="right"><a href="{{$.AdminPath}}/users/{{.ID}}">Gérer</a></td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="muted">Aucun utilisateur pour le moment.</p>
+  {{end}}
+</main>
+{{end}}

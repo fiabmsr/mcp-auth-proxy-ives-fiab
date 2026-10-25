@@ -1,0 +1,18 @@
+# !fiab: ressource Coolify (Docker Compose depuis le dépôt GitHub)
+services:
+  mcp-auth-proxy:
+    build: .
+    environment:
+      - 'EXTERNAL_URL=${EXTERNAL_URL}'
+      - NO_AUTO_TLS=true
+      - DATA_PATH=/data
+      - 'TRUSTED_PROXIES=${TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}'
+      - 'ADMIN_USERNAME=${ADMIN_USERNAME:-admin}'
+      - 'ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}'
+      - 'ADMIN_TOTP_SECRET=${ADMIN_TOTP_SECRET}'
+      - 'ENCRYPTION_KEY=${ENCRYPTION_KEY}'
+    volumes:
+      - 'mcp-auth-data:/data'
+    restart: unless-stopped
+volumes:
+  mcp-auth-data: null

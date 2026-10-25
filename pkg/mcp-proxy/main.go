@@ -22,6 +22,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sigbit/mcp-auth-proxy/v2/pkg/auth"
 	"github.com/sigbit/mcp-auth-proxy/v2/pkg/backend"
+	"github.com/sigbit/mcp-auth-proxy/v2/pkg/fiab"
 	"github.com/sigbit/mcp-auth-proxy/v2/pkg/idp"
 	"github.com/sigbit/mcp-auth-proxy/v2/pkg/proxy"
 	"github.com/sigbit/mcp-auth-proxy/v2/pkg/repository"
@@ -36,6 +37,9 @@ import (
 var ServerShutdownTimeout = 5 * time.Second
 
 var newProxyRouter = proxy.NewProxyRouter
+
+// !fiab: configuration du mode multi-utilisateurs, renseignée par la CLI (nil = mode d'origine)
+var Fiab *fiab.Config
 
 func Run(
 	listen string,
@@ -139,12 +143,20 @@ func Run(
 		return fmt.Errorf("failed to build logger: %w", err)
 	}
 
-	if len(proxyTarget) == 0 {
+	// !fiab: le mode multi-utilisateurs exclut les options globales, sinon un jeton utilisateur ouvrirait la cible globale
+	multiUser := Fiab.Enabled()
+	if multiUser && (len(proxyTarget) > 0 || password != "" || passwordHash != "" || len(proxyHeaders) > 0 || proxyBearerToken != "" ||
+		googleClientID != "" || githubClientID != "" || oidcConfigurationURL != "") {
+		return fmt.Errorf("ADMIN_USERNAME (mode multi-utilisateurs) est incompatible avec PASSWORD, PASSWORD_HASH, PROXY_HEADERS, PROXY_BEARER_TOKEN, les fournisseurs OAuth et l'URL cible en argument")
+	}
+	if !multiUser && len(proxyTarget) == 0 {
 		return fmt.Errorf("proxy target must be specified")
 	}
 	var be backend.Backend
 	var beHandler http.Handler
-	if proxyURL, err := url.Parse(proxyTarget[0]); err == nil && (proxyURL.Scheme == "http" || proxyURL.Scheme == "https") {
+	if multiUser {
+		// !fiab: pas de backend global, chaque utilisateur a sa propre cible
+	} else if proxyURL, err := url.Parse(proxyTarget[0]); err == nil && (proxyURL.Scheme == "http" || proxyURL.Scheme == "https") {
 		var err error
 		be, err = backend.NewTransparentBackend(logger, proxyURL, trustedProxy)
 		if err != nil {
@@ -305,6 +317,24 @@ func Run(
 	if err != nil {
 		return fmt.Errorf("failed to create proxy router: %w", err)
 	}
+	var fiabApp *fiab.App
+	if multiUser {
+		fiabApp, err = fiab.New(*Fiab, fiab.Deps{
+			Logger:            logger,
+			ExternalURL:       externalURL,
+			PublicKey:         &privKey.PublicKey,
+			AuthorizeRequests: repo,
+			DataPath:          dataPath,
+			RepositoryBackend: repositoryBackend,
+			RepositoryDSN:     repositoryDSN,
+			SecureCookie:      sessionCookieSecure(parsedExternalURL),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to start multi-user mode: %w", err)
+		}
+		defer fiabApp.Close()
+		idpRouter.SetHooks(fiabApp.IDPHooks())
+	}
 
 	router := gin.New()
 	router.SetTrustedProxies(trustedProxy)
@@ -330,9 +360,15 @@ func Run(
 		SameSite: http.SameSiteLaxMode,
 	})
 	router.Use(sessions.Sessions("session", store))
-	authRouter.SetupRoutes(router)
-	idpRouter.SetupRoutes(router)
-	proxyRouter.SetupRoutes(router)
+	if multiUser {
+		// !fiab: routes fiab (connexion, /u/{slug}/mcp, admin) avant celles de l'IDP pour leur appliquer les middlewares
+		fiabApp.SetupRoutes(router)
+		idpRouter.SetupRoutes(router)
+	} else {
+		authRouter.SetupRoutes(router)
+		idpRouter.SetupRoutes(router)
+		proxyRouter.SetupRoutes(router)
+	}
 
 	var tlsHostDetected bool
 	if autoTLS && !manualTLS &&

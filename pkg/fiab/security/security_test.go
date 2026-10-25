@@ -40,6 +40,12 @@ func TestLimiterBlocksAfterMaxFailures(t *testing.T) {
 	assert.False(t, l.Blocked("ip"), "le blocage est temporaire")
 }
 
+func TestRealIPTrustsCloudflareOnly(t *testing.T) {
+	assert.Equal(t, "137.255.162.150", RealIP("172.70.1.1", "137.255.162.150"))
+	assert.Equal(t, "203.0.113.9", RealIP("203.0.113.9", "137.255.162.150"), "en-tête usurpé hors Cloudflare ignoré")
+	assert.Equal(t, "172.70.1.1", RealIP("172.70.1.1", ""))
+}
+
 func TestIPAllowed(t *testing.T) {
 	list, err := ParseIPList([]string{"203.0.113.7", "10.0.0.0/8"})
 	assert.NoError(t, err)

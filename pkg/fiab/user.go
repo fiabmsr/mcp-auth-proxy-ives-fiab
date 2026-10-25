@@ -99,7 +99,7 @@ func (a *App) renderLogin(c *gin.Context, status int, slug string, locked bool, 
 
 func (a *App) handleLoginPost(c *gin.Context) {
 	ctx := c.Request.Context()
-	ip := c.ClientIP()
+	ip := clientIP(c)
 	login := strings.ToLower(strings.TrimSpace(c.PostForm("username")))
 	expected := a.expectedSlug(c)
 	locked := expected != ""

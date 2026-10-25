@@ -251,6 +251,11 @@ func (a *App) renderMessage(c *gin.Context, status int, title, text string) {
 	a.render(c, status, "message.html", gin.H{"Title": title, "Text": text})
 }
 
+// !fiab: IP du visiteur derrière Traefik (TRUSTED_PROXIES) et, le cas échéant, Cloudflare
+func clientIP(c *gin.Context) string {
+	return security.RealIP(c.ClientIP(), c.GetHeader("CF-Connecting-IP"))
+}
+
 // !fiab: URL publique de base, sans "/" final
 func (a *App) baseURL() string {
 	return strings.TrimSuffix(a.deps.ExternalURL, "/")

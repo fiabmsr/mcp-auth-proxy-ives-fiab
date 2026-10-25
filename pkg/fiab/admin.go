@@ -40,7 +40,7 @@ func (a *App) setupAdminRoutes(r *gin.Engine) {
 
 // !fiab: hors liste ADMIN_ALLOWED_IPS, le dashboard n'existe pas (404)
 func (a *App) adminIPFilter(c *gin.Context) {
-	if !security.IPAllowed(a.allowedIPs, c.ClientIP()) {
+	if !security.IPAllowed(a.allowedIPs, clientIP(c)) {
 		c.AbortWithStatus(http.StatusNotFound)
 	}
 }
@@ -85,7 +85,7 @@ func (a *App) adminFailure(c *gin.Context, err error) {
 
 // !fiab: journal des actions admin (jamais de secret : ni mot de passe, ni valeur d'en-tête)
 func (a *App) audit(c *gin.Context, actor, action, target string) {
-	entry := store.AuditEntry{Time: time.Now().UTC(), Actor: actor, Action: action, Target: target, IP: c.ClientIP()}
+	entry := store.AuditEntry{Time: time.Now().UTC(), Actor: actor, Action: action, Target: target, IP: clientIP(c)}
 	if err := a.store.AddAudit(c.Request.Context(), entry); err != nil {
 		a.logger.Warn("fiab: journal non enregistré", zap.Error(err))
 	}
@@ -111,7 +111,7 @@ func (a *App) renderAdminLogin(c *gin.Context, status int, errMsg string) {
 }
 
 func (a *App) adminLoginPost(c *gin.Context) {
-	ip := c.ClientIP()
+	ip := clientIP(c)
 	pre, _ := c.Cookie(adminPreCookie)
 	if !security.TokenEqual(pre, c.PostForm("csrf_token")) {
 		a.renderAdminLogin(c, http.StatusForbidden, "Formulaire expiré, veuillez réessayer.")

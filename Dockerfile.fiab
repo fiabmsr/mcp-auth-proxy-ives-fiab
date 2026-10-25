@@ -1,0 +1,20 @@
+# !fiab: image allégée pour Coolify (mode multi-utilisateurs, cibles HTTP uniquement)
+# !fiab: le Dockerfile d'origine reste intact pour faciliter les mises à jour depuis sigbit
+FROM golang:1.26-bookworm AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+# !fiab: dépendances en cache entre deux builds
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY ./ /app
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -ldflags "-w -s" -o /app/bin/main .
+
+# !fiab: image finale minimale (binaire + certificats), sans Node ni Python
+FROM gcr.io/distroless/static-debian12
+
+COPY --from=builder /app/bin/main /usr/local/bin/mcp-auth-proxy
+ENV DATA_PATH=/data
+EXPOSE 80
+
+ENTRYPOINT [ "/usr/local/bin/mcp-auth-proxy" ]

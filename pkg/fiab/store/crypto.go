@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -16,9 +17,11 @@ type Cipher struct {
 }
 
 func NewCipher(keyBase64 string) (*Cipher, error) {
-	key, err := base64.StdEncoding.DecodeString(strings.TrimSpace(keyBase64))
+	keyBase64 = strings.TrimSpace(keyBase64)
+	key, err := base64.StdEncoding.DecodeString(keyBase64)
 	if err != nil || len(key) != 32 {
-		return nil, errors.New("ENCRYPTION_KEY doit contenir 32 octets encodés en base64")
+		// !fiab: on indique la longueur reçue pour aider au diagnostic, jamais la valeur
+		return nil, fmt.Errorf("ENCRYPTION_KEY doit contenir 32 octets encodés en base64 (44 caractères finissant par =), reçu %d caractères", len(keyBase64))
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {

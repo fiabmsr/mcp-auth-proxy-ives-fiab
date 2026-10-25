@@ -1,7 +1,7 @@
 # !fiab: ressource Coolify (Docker Compose depuis le dépôt GitHub)
 services:
   mcp-auth-proxy:
-    build: .
+    image: 'ghcr.io/fiabmsr/mcp-auth-proxy-ives-fiab:main'
     environment:
       - 'EXTERNAL_URL=${EXTERNAL_URL}'
       - NO_AUTO_TLS=true

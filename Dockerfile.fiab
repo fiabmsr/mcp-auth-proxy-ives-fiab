@@ -15,6 +15,8 @@ FROM gcr.io/distroless/static-debian12
 
 COPY --from=builder /app/bin/main /usr/local/bin/mcp-auth-proxy
 ENV DATA_PATH=/data
+# !fiab: derrière Traefik (Coolify), le TLS est géré par le proxy, pas par l'application
+ENV NO_AUTO_TLS=true
 EXPOSE 80
 
 ENTRYPOINT [ "/usr/local/bin/mcp-auth-proxy" ]

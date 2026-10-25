@@ -10,6 +10,8 @@ services:
       - 'ADMIN_USERNAME=${ADMIN_USERNAME:-admin}'
       - 'ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}'
       - 'ADMIN_TOTP_SECRET=${ADMIN_TOTP_SECRET}'
+      - 'ADMIN_PATH=${ADMIN_PATH:-/admin}'
+      - 'ADMIN_ALLOWED_IPS=${ADMIN_ALLOWED_IPS:-}'
       - 'ENCRYPTION_KEY=${ENCRYPTION_KEY}'
     volumes:
       - 'mcp-auth-data:/data'
